@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://d0ty1oj717cyy"]
+
+[node name="ChessBoard2D" type="ChessBoard2D"]
+dark_color = Color(0, 0.42, 0.021, 1)
+square_size = 75.0

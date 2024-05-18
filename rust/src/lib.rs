@@ -1,3 +1,6 @@
+mod classes;
+mod types;
+
 use godot::prelude::*;
 
 struct Game;
