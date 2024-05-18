@@ -13,6 +13,9 @@ pub struct ChessBoard2D {
     square_size: f32,
     board: Board,
     squares: Vec<Gd<Sprite2D>>,
+    last_picked: usize,
+    last_placed: usize,
+    current_picked: usize,
     base: Base<CanvasGroup>,
 }
 
@@ -24,6 +27,9 @@ impl ICanvasGroup for ChessBoard2D {
             square_size: 70.0,
             board: Board::starting(),
             squares: Vec::new(),
+            last_picked: 0,
+            last_placed: 0,
+            current_picked: 0,
             base,
         }
     }
@@ -55,6 +61,7 @@ impl ICanvasGroup for ChessBoard2D {
                     square.get_position()
                         + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
                 );
+                piece.bind_mut().index = i;
                 self.base_mut().add_child(piece.upcast());
             }
         }
@@ -78,14 +85,55 @@ impl ChessBoard2D {
     }
 
     pub fn place(&mut self, piece: &mut ChessPiece, position: Vector2) {
-        for square in &self.squares {
+        for (i, square) in self.squares.iter().enumerate() {
             if square.get_rect().has_point(square.to_local(position)) {
                 piece.base_mut().set_position(
                     square.get_position()
                         + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
                 );
+                piece.index = i;
+
+                let last_picked_color = if is_index_dark(self.last_picked) {
+                    self.dark_color
+                } else {
+                    Color::WHITE
+                };
+                self.squares[self.last_picked].set_modulate(last_picked_color);
+
+                let last_placed_color = if is_index_dark(self.last_placed) {
+                    self.dark_color
+                } else {
+                    Color::WHITE
+                };
+                self.squares[self.last_placed].set_modulate(last_placed_color);
+
+                let mut picked_square = self.squares[self.current_picked].clone();
+                let new_picked_color = picked_square
+                    .get_modulate()
+                    .lerp(Color::YELLOW.darkened(0.5), 0.5);
+                picked_square.set_modulate(new_picked_color);
+
+                let mut placed_square = self.squares[i].clone();
+                let new_color = placed_square.get_modulate().lerp(Color::YELLOW, 0.5);
+                placed_square.set_modulate(new_color);
+                self.last_placed = i;
+
                 break;
             }
         }
     }
+
+    pub fn pick(&mut self, piece: &ChessPiece) {
+        let mut square = self.squares[piece.index].clone();
+        let new_color = square.get_modulate().lerp(Color::YELLOW, 0.5);
+        square.set_modulate(new_color);
+        self.last_picked = self.current_picked;
+        self.current_picked = piece.index
+    }
+}
+
+fn is_index_dark(index: usize) -> bool {
+    let rank = index / 8;
+    let file = index % 8;
+    rank % 2 != file % 2
 }

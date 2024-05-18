@@ -1,5 +1,3 @@
-use std::ops::DerefMut;
-
 use crate::classes::ChessBoard2D;
 use godot::{
     engine::{global::MouseButton, ISprite2D, InputEvent, InputEventMouseButton, Sprite2D},
@@ -10,6 +8,7 @@ use godot::{
 #[class(base = Sprite2D)]
 pub struct ChessPiece {
     is_held: bool,
+    pub index: usize,
 
     base: Base<Sprite2D>,
 }
@@ -19,6 +18,7 @@ impl ISprite2D for ChessPiece {
     fn init(base: Base<Sprite2D>) -> Self {
         Self {
             is_held: false,
+            index: 0,
             base,
         }
     }
@@ -33,11 +33,21 @@ impl ISprite2D for ChessPiece {
             {
                 if event.is_pressed() {
                     self.is_held = true;
+                    self.base()
+                        .get_parent()
+                        .unwrap()
+                        .cast::<ChessBoard2D>()
+                        .bind_mut()
+                        .pick(self);
                 }
                 if event.is_released() {
                     self.is_held = false;
-                    let mut board = self.base().get_parent().unwrap().cast::<ChessBoard2D>();
-                    board.bind_mut().place(self, event.get_position());
+                    self.base()
+                        .get_parent()
+                        .unwrap()
+                        .cast::<ChessBoard2D>()
+                        .bind_mut()
+                        .place(self, event.get_position());
                 }
             }
         }
