@@ -4,11 +4,11 @@ compatibility_minimum = 4.1
 reloadable = true
 
 [libraries]
-linux.debug.x86_64 =     "res://../rust/target/debug/libgame.so"
-linux.release.x86_64 =   "res://../rust/target/release/libgame.so"
-windows.debug.x86_64 =   "res://../rust/target/debug/game.dll"
-windows.release.x86_64 = "res://../rust/target/release/game.dll"
-macos.debug =            "res://../rust/target/debug/libgame.dylib"
-macos.release =          "res://../rust/target/release/libgame.dylib"
-macos.debug.arm64 =      "res://../rust/target/debug/libgame.dylib"
-macos.release.arm64 =    "res://../rust/target/release/libgame.dylib"
+linux.debug.x86_64 =     "res://../rust/target/debug/libchess.so"
+linux.release.x86_64 =   "res://../rust/target/release/libchess.so"
+windows.debug.x86_64 =   "res://../rust/target/debug/chess.dll"
+windows.release.x86_64 = "res://../rust/target/release/chess.dll"
+macos.debug =            "res://../rust/target/debug/libchess.dylib"
+macos.release =          "res://../rust/target/release/libchess.dylib"
+macos.debug.arm64 =      "res://../rust/target/debug/libchess.dylib"
+macos.release.arm64 =    "res://../rust/target/release/libchess.dylib"
