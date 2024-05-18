@@ -13,6 +13,7 @@ pub struct ChessBoard2D {
     square_size: f32,
     board: Board,
     squares: Vec<Gd<Sprite2D>>,
+    pieces: Vec<Option<Gd<ChessPiece>>>,
     last_picked: usize,
     last_placed: usize,
     current_picked: usize,
@@ -27,6 +28,7 @@ impl ICanvasGroup for ChessBoard2D {
             square_size: 70.0,
             board: Board::starting(),
             squares: Vec::new(),
+            pieces: vec![None; 64],
             last_picked: 0,
             last_placed: 0,
             current_picked: 0,
@@ -62,6 +64,7 @@ impl ICanvasGroup for ChessBoard2D {
                         + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
                 );
                 piece.bind_mut().index = i;
+                self.pieces[i] = Some(piece.clone());
                 self.base_mut().add_child(piece.upcast());
             }
         }
@@ -118,6 +121,12 @@ impl ChessBoard2D {
                 placed_square.set_modulate(new_color);
                 self.last_placed = i;
 
+                self.pieces[self.current_picked] = None;
+                if let Some(ref mut piece) = &mut self.pieces[i] {
+                    piece.queue_free();
+                }
+                self.pieces[i] = Some(piece.base().clone().cast());
+
                 break;
             }
         }
@@ -127,6 +136,8 @@ impl ChessBoard2D {
         let mut square = self.squares[piece.index].clone();
         let new_color = square.get_modulate().lerp(Color::YELLOW, 0.5);
         square.set_modulate(new_color);
+        self.base_mut()
+            .move_child(piece.base().clone().upcast(), -1);
         self.last_picked = self.current_picked;
         self.current_picked = piece.index
     }

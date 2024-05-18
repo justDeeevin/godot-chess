@@ -40,7 +40,7 @@ impl ISprite2D for ChessPiece {
                         .bind_mut()
                         .pick(self);
                 }
-                if event.is_released() {
+                if event.is_released() && self.is_held {
                     self.is_held = false;
                     self.base()
                         .get_parent()
