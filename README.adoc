@@ -1,3 +1,3 @@
 = Godot Chess
 
-This is a simple chess game made with Godot and https://github.com/godot-rust/gdext[Rust gdext], following Sebastian Lague's https://www.youtube.com/watch?v=U4ogK0MIzqk[**Coding Adventure: Chess**]. I'm doing this both to enhance my Godot and gdext skills, and to finally get a working chess backend (I've tried this a couple times on my own... see https://github.com/justdeeevin/Chess[Chess] and https://github.com/justdeeevin/rust-chess[rust-chess]).
+This is a simple chess game made with Godot and https://github.com/godot-rust/gdext[Rust gdext], following Sebastian Lague's https://www.youtube.com/watch?v=U4ogK0MIzqk[_Coding Adventure: Chess_]. I'm doing this both to enhance my Godot and gdext skills, and to finally get a working chess backend (I've tried this a couple times on my own... see https://github.com/justdeeevin/Chess[Chess] and https://github.com/justdeeevin/rust-chess[rust-chess]).
