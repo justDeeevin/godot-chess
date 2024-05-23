@@ -1,6 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::Not};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Piece {
     King,
     Queen,
@@ -26,6 +26,77 @@ impl Display for Piece {
     }
 }
 
+/// Precalculated.
+/// For each square, `[north, south, west, east, northwest, southeast, northeast, southwest]`
+const NUM_SQUARES_TO_EDGE: [[i8; 8]; 64] = [
+    [0, 7, 0, 7, 0, 7, 0, 0],
+    [0, 7, 1, 6, 0, 6, 0, 1],
+    [0, 7, 2, 5, 0, 5, 0, 2],
+    [0, 7, 3, 4, 0, 4, 0, 3],
+    [0, 7, 4, 3, 0, 3, 0, 4],
+    [0, 7, 5, 2, 0, 2, 0, 5],
+    [0, 7, 6, 1, 0, 1, 0, 6],
+    [0, 7, 7, 0, 0, 0, 0, 7],
+    [1, 6, 0, 7, 0, 6, 1, 0],
+    [1, 6, 1, 6, 1, 6, 1, 1],
+    [1, 6, 2, 5, 1, 5, 1, 2],
+    [1, 6, 3, 4, 1, 4, 1, 3],
+    [1, 6, 4, 3, 1, 3, 1, 4],
+    [1, 6, 5, 2, 1, 2, 1, 5],
+    [1, 6, 6, 1, 1, 1, 1, 6],
+    [1, 6, 7, 0, 1, 0, 0, 6],
+    [2, 5, 0, 7, 0, 5, 2, 0],
+    [2, 5, 1, 6, 1, 5, 2, 1],
+    [2, 5, 2, 5, 2, 5, 2, 2],
+    [2, 5, 3, 4, 2, 4, 2, 3],
+    [2, 5, 4, 3, 2, 3, 2, 4],
+    [2, 5, 5, 2, 2, 2, 2, 5],
+    [2, 5, 6, 1, 2, 1, 1, 5],
+    [2, 5, 7, 0, 2, 0, 0, 5],
+    [3, 4, 0, 7, 0, 4, 3, 0],
+    [3, 4, 1, 6, 1, 4, 3, 1],
+    [3, 4, 2, 5, 2, 4, 3, 2],
+    [3, 4, 3, 4, 3, 4, 3, 3],
+    [3, 4, 4, 3, 3, 3, 3, 4],
+    [3, 4, 5, 2, 3, 2, 2, 4],
+    [3, 4, 6, 1, 3, 1, 1, 4],
+    [3, 4, 7, 0, 3, 0, 0, 4],
+    [4, 3, 0, 7, 0, 3, 4, 0],
+    [4, 3, 1, 6, 1, 3, 4, 1],
+    [4, 3, 2, 5, 2, 3, 4, 2],
+    [4, 3, 3, 4, 3, 3, 4, 3],
+    [4, 3, 4, 3, 4, 3, 3, 3],
+    [4, 3, 5, 2, 4, 2, 2, 3],
+    [4, 3, 6, 1, 4, 1, 1, 3],
+    [4, 3, 7, 0, 4, 0, 0, 3],
+    [5, 2, 0, 7, 0, 2, 5, 0],
+    [5, 2, 1, 6, 1, 2, 5, 1],
+    [5, 2, 2, 5, 2, 2, 5, 2],
+    [5, 2, 3, 4, 3, 2, 4, 2],
+    [5, 2, 4, 3, 4, 2, 3, 2],
+    [5, 2, 5, 2, 5, 2, 2, 2],
+    [5, 2, 6, 1, 5, 1, 1, 2],
+    [5, 2, 7, 0, 5, 0, 0, 2],
+    [6, 1, 0, 7, 0, 1, 6, 0],
+    [6, 1, 1, 6, 1, 1, 6, 1],
+    [6, 1, 2, 5, 2, 1, 5, 1],
+    [6, 1, 3, 4, 3, 1, 4, 1],
+    [6, 1, 4, 3, 4, 1, 3, 1],
+    [6, 1, 5, 2, 5, 1, 2, 1],
+    [6, 1, 6, 1, 6, 1, 1, 1],
+    [6, 1, 7, 0, 6, 0, 0, 1],
+    [7, 0, 0, 7, 0, 0, 7, 0],
+    [7, 0, 1, 6, 1, 0, 6, 0],
+    [7, 0, 2, 5, 2, 0, 5, 0],
+    [7, 0, 3, 4, 3, 0, 4, 0],
+    [7, 0, 4, 3, 4, 0, 3, 0],
+    [7, 0, 5, 2, 5, 0, 2, 0],
+    [7, 0, 6, 1, 6, 0, 1, 0],
+    [7, 0, 7, 0, 7, 0, 0, 0],
+];
+
+const DIRECTION_OFFSETS: [i8; 8] = [-8, 8, -1, 1, -9, 9, -7, 7];
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     Black,
@@ -41,6 +112,17 @@ impl Display for Color {
                 Color::White => "White",
             }
         )
+    }
+}
+
+impl Not for Color {
+    type Output = Color;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Color::Black => Color::White,
+            Color::White => Color::Black,
+        }
     }
 }
 
@@ -69,6 +151,11 @@ impl Display for Troop {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} ", self.color)?;
         write!(f, "{}", self.piece)
+    }
+}
+impl Troop {
+    pub fn is_sliding(&self) -> bool {
+        matches!(self.piece, Piece::Rook | Piece::Bishop | Piece::Queen)
     }
 }
 
@@ -173,6 +260,52 @@ impl Board {
 
         Ok(board)
     }
+
+    pub fn moves(&self) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        for (i, troop) in self.troops.iter().enumerate() {
+            if let Some(troop) = troop {
+                if troop.color == self.turn {
+                    if troop.is_sliding() {
+                        moves.append(&mut self.generate_sliding_moves(i, troop.piece));
+                    }
+                }
+            }
+        }
+
+        moves
+    }
+
+    fn generate_sliding_moves(&self, start: usize, piece: Piece) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        let start_direction = if piece == Piece::Bishop { 4 } else { 0 };
+        let end_direction = if piece == Piece::Rook { 4 } else { 8 };
+
+        for (direction, direction_offset) in DIRECTION_OFFSETS
+            .iter()
+            .enumerate()
+            .take(end_direction)
+            .skip(start_direction)
+        {
+            for n in 0..NUM_SQUARES_TO_EDGE[start][direction] {
+                let target = (start as i8 + (direction_offset * (n + 1))) as usize;
+                let troop = self.troops[target];
+                if troop.is_some() && troop.unwrap().color == self.turn {
+                    break;
+                }
+
+                moves.push(Move { start, end: target });
+
+                if troop.is_some() && troop.unwrap().color != self.turn {
+                    break;
+                }
+            }
+        }
+
+        moves
+    }
 }
 
 impl Display for Board {
@@ -201,4 +334,10 @@ impl Display for Board {
         }
         Ok(())
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Move {
+    pub start: usize,
+    pub end: usize,
 }

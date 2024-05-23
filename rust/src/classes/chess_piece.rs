@@ -53,7 +53,7 @@ impl ISprite2D for ChessPiece {
         }
     }
 
-    fn process(&mut self, delta: f64) {
+    fn process(&mut self, _delta: f64) {
         if self.is_held {
             let mouse_position = self.base().get_viewport().unwrap().get_mouse_position();
             self.base_mut().set_position(mouse_position);

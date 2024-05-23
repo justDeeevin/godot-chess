@@ -1,4 +1,7 @@
-use crate::{classes::ChessPiece, types::Board};
+use crate::{
+    classes::ChessPiece,
+    types::{Board, Move},
+};
 use godot::{
     engine::{CanvasGroup, ICanvasGroup, Sprite2D, Texture2D},
     prelude::*,
@@ -90,46 +93,92 @@ impl ChessBoard2D {
     pub fn place(&mut self, piece: &mut ChessPiece, position: Vector2) {
         for (i, square) in self.squares.iter().enumerate() {
             if square.get_rect().has_point(square.to_local(position)) {
-                piece.base_mut().set_position(
-                    square.get_position()
-                        + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
-                );
-                piece.index = i;
+                if self.board.moves().contains(&Move {
+                    start: self.current_picked,
+                    end: i,
+                }) || i == self.current_picked
+                    || !self.board.troops[self.current_picked].unwrap().is_sliding()
+                {
+                    // Drop piece on the square
+                    piece.base_mut().set_position(
+                        square.get_position()
+                            + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
+                    );
+                    piece.index = i;
 
-                let last_picked_color = if is_index_dark(self.last_picked) {
-                    self.dark_color
+                    // Clear the last move's highlights
+                    let last_picked_color = if is_index_dark(self.last_picked) {
+                        self.dark_color
+                    } else {
+                        Color::WHITE
+                    };
+                    self.squares[self.last_picked].set_modulate(last_picked_color);
+
+                    let last_placed_color = if is_index_dark(self.last_placed) {
+                        self.dark_color
+                    } else {
+                        Color::WHITE
+                    };
+                    self.squares[self.last_placed].set_modulate(last_placed_color);
+
+                    // Highlight the new placed square
+                    let mut picked_square = self.squares[self.current_picked].clone();
+                    let new_picked_color = picked_square
+                        .get_modulate()
+                        .lerp(Color::YELLOW.darkened(0.5), 0.5);
+                    picked_square.set_modulate(new_picked_color);
+
+                    // Make sure to clear any red before lerping
+                    let red = if is_index_dark(i) {
+                        self.squares[i].get_modulate() != self.dark_color
+                    } else {
+                        self.squares[i].get_modulate() != Color::WHITE
+                    };
+                    if red {
+                        if is_index_dark(i) {
+                            self.squares[i].set_modulate(self.dark_color);
+                        } else {
+                            self.squares[i].set_modulate(Color::WHITE);
+                        }
+                    }
+
+                    let mut placed_square = self.squares[i].clone();
+                    let new_color = placed_square.get_modulate().lerp(Color::YELLOW, 0.5);
+                    placed_square.set_modulate(new_color);
+                    self.last_placed = i;
+
+                    // Capture, if necessary, and update the board's state
+                    self.pieces[self.current_picked] = None;
+                    let picked_troop = self.board.troops[self.current_picked].unwrap();
+                    self.board.troops[self.current_picked] = None;
+                    if let Some(ref mut piece) = &mut self.pieces[i] {
+                        piece.queue_free();
+                    }
+                    self.pieces[i] = Some(piece.base().clone().cast());
+                    self.board.troops[i] = Some(picked_troop);
+                    if i != self.current_picked {
+                        self.board.turn = !self.board.turn;
+                    }
+
+                    break;
                 } else {
-                    Color::WHITE
-                };
-                self.squares[self.last_picked].set_modulate(last_picked_color);
-
-                let last_placed_color = if is_index_dark(self.last_placed) {
-                    self.dark_color
-                } else {
-                    Color::WHITE
-                };
-                self.squares[self.last_placed].set_modulate(last_placed_color);
-
-                let mut picked_square = self.squares[self.current_picked].clone();
-                let new_picked_color = picked_square
-                    .get_modulate()
-                    .lerp(Color::YELLOW.darkened(0.5), 0.5);
-                picked_square.set_modulate(new_picked_color);
-
-                let mut placed_square = self.squares[i].clone();
-                let new_color = placed_square.get_modulate().lerp(Color::YELLOW, 0.5);
-                placed_square.set_modulate(new_color);
-                self.last_placed = i;
-
-                self.pieces[self.current_picked] = None;
-                if let Some(ref mut piece) = &mut self.pieces[i] {
-                    piece.queue_free();
+                    self.place(piece, self.squares[self.current_picked].get_position());
+                    break;
                 }
-                self.pieces[i] = Some(piece.base().clone().cast());
-
-                break;
             }
         }
+        self.squares.iter_mut().enumerate().for_each(|(i, s)| {
+            let color = if is_index_dark(i) {
+                self.dark_color
+            } else {
+                Color::WHITE
+            };
+            if i != self.current_picked && i != self.last_placed && i != self.last_picked {
+                s.set_modulate(color);
+            }
+        });
+
+        godot_print!("{}", self.board.turn);
     }
 
     pub fn pick(&mut self, piece: &ChessPiece) {
@@ -139,7 +188,31 @@ impl ChessBoard2D {
         self.base_mut()
             .move_child(piece.base().clone().upcast(), -1);
         self.last_picked = self.current_picked;
-        self.current_picked = piece.index
+        self.current_picked = piece.index;
+        for i in self.board.moves().iter_mut().filter_map(|m| {
+            if m.start == self.current_picked {
+                Some(m.end)
+            } else {
+                None
+            }
+        }) {
+            let mut square = self.squares[i].clone();
+            let dark = is_index_dark(i);
+            let yellow = if dark {
+                square.get_modulate() != self.dark_color
+            } else {
+                square.get_modulate() != Color::WHITE
+            };
+            if yellow {
+                if dark {
+                    square.set_modulate(self.dark_color);
+                } else {
+                    square.set_modulate(Color::WHITE);
+                }
+            }
+            let new_color = square.get_modulate().lerp(Color::RED, 0.5);
+            square.set_modulate(new_color);
+        }
     }
 }
 
