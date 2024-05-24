@@ -1,3 +1,7 @@
-[gd_scene format=3 uid="uid://hpe5apbyxhq"]
+[gd_scene load_steps=2 format=3 uid="uid://hpe5apbyxhq"]
+
+[ext_resource type="PackedScene" uid="uid://d0ty1oj717cyy" path="res://ChessBoard.tscn" id="1_axy3k"]
 
 [node name="Main" type="Main"]
+
+[node name="ChessBoard2D" parent="." instance=ExtResource("1_axy3k")]
