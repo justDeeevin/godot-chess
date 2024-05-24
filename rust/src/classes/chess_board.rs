@@ -177,8 +177,6 @@ impl ChessBoard2D {
                 s.set_modulate(color);
             }
         });
-
-        godot_print!("{}", self.board.turn);
     }
 
     pub fn pick(&mut self, piece: &ChessPiece) {
