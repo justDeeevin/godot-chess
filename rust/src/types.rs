@@ -1,4 +1,7 @@
-use std::{fmt::Display, ops::Not};
+use std::{
+    fmt::{Debug, Display},
+    ops::Not,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Piece {
@@ -95,7 +98,33 @@ const NUM_SQUARES_TO_EDGE: [[i8; 8]; 64] = [
     [7, 0, 7, 0, 7, 0, 0, 0],
 ];
 
+/// `[north, south, west, east, northwest, southeast, northeast, southwest]`
 const DIRECTION_OFFSETS: [i8; 8] = [-8, 8, -1, 1, -9, 9, -7, 7];
+
+fn square_to_index(square: (char, u8)) -> Result<usize, String> {
+    let rank;
+    if square.1 > 8 {
+        return Err(format!("Rank {} is too large", square.1));
+    } else if square.1 < 1 {
+        return Err(format!("Rank {} is too small", square.1));
+    } else {
+        rank = 8 - square.1;
+    }
+
+    let file = match square.0 {
+        'a' => 0,
+        'b' => 1,
+        'c' => 2,
+        'd' => 3,
+        'e' => 4,
+        'f' => 5,
+        'g' => 6,
+        'h' => 7,
+        _ => return Err(format!("Invalid file {}", square.0)),
+    };
+
+    Ok(((8 * rank) + file) as usize)
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Color {
@@ -153,16 +182,12 @@ impl Display for Troop {
         write!(f, "{}", self.piece)
     }
 }
-impl Troop {
-    pub fn is_sliding(&self) -> bool {
-        matches!(self.piece, Piece::Rook | Piece::Bishop | Piece::Queen)
-    }
-}
 
 pub struct Board {
     pub troops: [Option<Troop>; 64],
     pub turn: Color,
     pub castling_rights: CastlingRights,
+    pub en_passant_target: Option<usize>,
 }
 
 pub struct CastlingRights {
@@ -196,10 +221,26 @@ impl Board {
             black_queen_side: fields[2].contains('q'),
         };
 
+        let mut en_passant_target = None;
+        if fields[3] != "-" {
+            let mut churn = fields[3].chars().enumerate();
+            while let Some((i, c)) = churn.next() {
+                let file = c;
+                let rank = churn
+                    .next()
+                    .ok_or(format!("Invalid square at {}", i))?
+                    .1
+                    .to_digit(10)
+                    .ok_or(format!("Invalid rank at {}", i + 1))? as u8;
+                en_passant_target = Some(square_to_index((file, rank))?);
+            }
+        }
+
         let mut board = Self {
             troops: [None; 64],
             turn,
             castling_rights,
+            en_passant_target,
         };
 
         let rows = fields[0].split('/').collect::<Vec<&str>>();
@@ -267,8 +308,14 @@ impl Board {
         for (i, troop) in self.troops.iter().enumerate() {
             if let Some(troop) = troop {
                 if troop.color == self.turn {
-                    if troop.is_sliding() {
-                        moves.append(&mut self.generate_sliding_moves(i, troop.piece));
+                    match troop.piece {
+                        Piece::Rook | Piece::Bishop | Piece::Queen => {
+                            moves.append(&mut self.generate_sliding_moves(i, troop.piece));
+                        }
+                        Piece::Pawn => {
+                            moves.append(&mut self.generate_pawn_moves(i));
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -306,6 +353,49 @@ impl Board {
 
         moves
     }
+
+    fn generate_pawn_moves(&self, start: usize) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        let direction = if self.turn == Color::White { 0 } else { 1 };
+
+        if self.troops[(start as i8 + DIRECTION_OFFSETS[direction]) as usize].is_none() {
+            moves.push(Move {
+                start,
+                end: (start as i8 + DIRECTION_OFFSETS[direction]) as usize,
+            });
+
+            if (start / 8 == 1 && self.turn == Color::Black)
+                || (start / 8 == 6 && self.turn == Color::White)
+                    && self.troops[(start as i8 + DIRECTION_OFFSETS[direction] * 2) as usize]
+                        .is_none()
+            {
+                moves.push(Move {
+                    start,
+                    end: (start as i8 + (DIRECTION_OFFSETS[direction] * 2)) as usize,
+                });
+            }
+        }
+
+        let diagonals = [
+            (start as i8 + DIRECTION_OFFSETS[direction + 4]) as usize,
+            (start as i8 + DIRECTION_OFFSETS[direction + 6]) as usize,
+        ];
+
+        for diagonal in diagonals {
+            if (self.troops[diagonal].is_some()
+                && self.troops[diagonal].unwrap().color != self.turn)
+                || (self.troops[diagonal].is_none() && self.en_passant_target == Some(diagonal))
+            {
+                moves.push(Move {
+                    start,
+                    end: diagonal,
+                });
+            }
+        }
+
+        moves
+    }
 }
 
 impl Display for Board {
@@ -333,6 +423,11 @@ impl Display for Board {
             write!(f, " (q)")?;
         }
         Ok(())
+    }
+}
+impl Debug for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 

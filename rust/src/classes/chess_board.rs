@@ -1,6 +1,6 @@
 use crate::{
     classes::ChessPiece,
-    types::{Board, Move},
+    types::{self, Board, Move, Piece},
 };
 use godot::{
     engine::{CanvasGroup, ICanvasGroup, Sprite2D, Texture2D},
@@ -15,6 +15,9 @@ pub struct ChessBoard2D {
     #[export]
     square_size: f32,
     pub board: Board,
+    #[export]
+    /// If blank, the normal starting position is used.
+    starting_fen: GString,
     squares: Vec<Gd<Sprite2D>>,
     pieces: Vec<Option<Gd<ChessPiece>>>,
     last_picked: usize,
@@ -31,6 +34,7 @@ impl ICanvasGroup for ChessBoard2D {
             square_size: 70.0,
             board: Board::starting(),
             squares: Vec::new(),
+            starting_fen: "".into(),
             pieces: vec![None; 64],
             last_picked: 0,
             last_placed: 0,
@@ -40,6 +44,14 @@ impl ICanvasGroup for ChessBoard2D {
     }
 
     fn ready(&mut self) {
+        let fen = if self.starting_fen.is_empty() {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".into()
+        } else {
+            self.starting_fen.clone().to_string()
+        };
+
+        self.board = Board::from_fen(&fen).unwrap();
+
         for rank in 0..8 {
             for file in 0..8 {
                 let dark = file % 2 != rank % 2;
@@ -97,7 +109,10 @@ impl ChessBoard2D {
                     start: self.current_picked,
                     end: i,
                 }) || i == self.current_picked
-                    || !self.board.troops[self.current_picked].unwrap().is_sliding()
+                    || (!matches!(
+                        self.board.troops[self.current_picked].unwrap().piece,
+                        Piece::Rook | Piece::Bishop | Piece::Queen
+                    ) && self.board.troops[self.current_picked].unwrap().piece != Piece::Pawn)
                 {
                     // Drop piece on the square
                     piece.base_mut().set_position(
@@ -158,6 +173,30 @@ impl ChessBoard2D {
                     self.board.troops[i] = Some(picked_troop);
                     if i != self.current_picked {
                         self.board.turn = !self.board.turn;
+                    }
+
+                    // En passant target check
+                    if self.board.troops[i].unwrap().piece == Piece::Pawn
+                        && (i as i8 - self.current_picked as i8).abs() == 16
+                    {
+                        let target = (i as i8
+                            + match self.board.turn {
+                                types::Color::White => -8,
+                                types::Color::Black => 8,
+                            }) as usize;
+                        self.board.en_passant_target = Some(target);
+                    }
+
+                    // En passant capture check
+                    if self.board.en_passant_target == Some(i) {
+                        let piece_index = (i as i8
+                            + match self.board.turn {
+                                types::Color::White => -8,
+                                types::Color::Black => 8,
+                            }) as usize;
+                        let mut piece = self.pieces[piece_index].clone().unwrap();
+                        self.pieces[piece_index] = None;
+                        piece.queue_free();
                     }
 
                     break;
