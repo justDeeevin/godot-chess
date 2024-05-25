@@ -14,7 +14,7 @@ pub struct ChessBoard2D {
     dark_color: Color,
     #[export]
     square_size: f32,
-    board: Board,
+    pub board: Board,
     squares: Vec<Gd<Sprite2D>>,
     pieces: Vec<Option<Gd<ChessPiece>>>,
     last_picked: usize,
