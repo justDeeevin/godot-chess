@@ -1,5 +1,4 @@
 rust/target/
 godot/.godot/
 godot/*.translation
-godot/chess.exe
-godot/chess.pck
+godot/export/*
