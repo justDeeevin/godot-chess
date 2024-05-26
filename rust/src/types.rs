@@ -325,6 +325,11 @@ impl Board {
         }
 
         moves
+            .into_iter()
+            .filter(|m| {
+                !(self.troops[m.end].is_some() && self.troops[m.end].unwrap().color == self.turn)
+            })
+            .collect()
     }
 
     fn generate_sliding_moves(&self, start: usize, piece: Piece) -> Vec<Move> {
@@ -342,13 +347,10 @@ impl Board {
             for n in 0..NUM_SQUARES_TO_EDGE[start][direction] {
                 let target = (start as i8 + (direction_offset * (n + 1))) as usize;
                 let troop = self.troops[target];
-                if troop.is_some() && troop.unwrap().color == self.turn {
-                    break;
-                }
 
                 moves.push(Move { start, end: target });
 
-                if troop.is_some() && troop.unwrap().color != self.turn {
+                if troop.is_some() {
                     break;
                 }
             }
@@ -386,8 +388,7 @@ impl Board {
         ];
 
         for diagonal in diagonals {
-            if (self.troops[diagonal].is_some()
-                && self.troops[diagonal].unwrap().color != self.turn)
+            if self.troops[diagonal].is_some()
                 || (self.troops[diagonal].is_none() && self.en_passant_target == Some(diagonal))
             {
                 moves.push(Move {
