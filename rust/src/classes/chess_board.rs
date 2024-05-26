@@ -79,6 +79,7 @@ impl ICanvasGroup for ChessBoard2D {
                         + Vector2::new(self.square_size / 2.0, self.square_size / 2.0),
                 );
                 piece.bind_mut().index = i;
+
                 self.pieces[i] = Some(piece.clone());
                 self.base_mut().add_child(piece.upcast());
             }
@@ -175,18 +176,6 @@ impl ChessBoard2D {
                         self.board.turn = !self.board.turn;
                     }
 
-                    // En passant target check
-                    if self.board.troops[i].unwrap().piece == Piece::Pawn
-                        && (i as i8 - self.current_picked as i8).abs() == 16
-                    {
-                        let target = (i as i8
-                            + match self.board.turn {
-                                types::Color::White => -8,
-                                types::Color::Black => 8,
-                            }) as usize;
-                        self.board.en_passant_target = Some(target);
-                    }
-
                     // En passant capture check
                     if self.board.en_passant_target == Some(i) {
                         let piece_index = (i as i8
@@ -197,6 +186,20 @@ impl ChessBoard2D {
                         let mut piece = self.pieces[piece_index].clone().unwrap();
                         self.pieces[piece_index] = None;
                         piece.queue_free();
+                    }
+
+                    // En passant target check
+                    if self.board.troops[i].unwrap().piece == Piece::Pawn
+                        && (i as i8 - self.current_picked as i8).abs() == 16
+                    {
+                        let target = (i as i8
+                            + match self.board.turn {
+                                types::Color::White => -8,
+                                types::Color::Black => 8,
+                            }) as usize;
+                        self.board.en_passant_target = Some(target);
+                    } else {
+                        self.board.en_passant_target = None;
                     }
 
                     break;
