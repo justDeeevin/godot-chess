@@ -310,10 +310,10 @@ impl Board {
                 if troop.color == self.turn {
                     match troop.piece {
                         Piece::Rook | Piece::Bishop | Piece::Queen => {
-                            moves.append(&mut self.generate_sliding_moves(i, troop.piece));
+                            moves.extend(self.generate_sliding_moves(i, troop.piece));
                         }
                         Piece::Pawn => {
-                            moves.append(&mut self.generate_pawn_moves(i));
+                            moves.extend(self.generate_pawn_moves(i));
                         }
                         _ => {}
                     }
