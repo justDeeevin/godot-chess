@@ -315,6 +315,9 @@ impl Board {
                         Piece::Pawn => {
                             moves.extend(self.generate_pawn_moves(i));
                         }
+                        Piece::Knight => {
+                            moves.extend(self.generate_knight_moves(i));
+                        }
                         _ => {}
                     }
                 }
@@ -395,6 +398,58 @@ impl Board {
         }
 
         moves.into_iter().filter(|m| m.end < 64).collect()
+    }
+
+    fn generate_knight_moves(&self, start: usize) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        for (i, cardinal) in DIRECTION_OFFSETS.into_iter().enumerate().take(4) {
+            let first_move = cardinal * 2;
+            if i < 2 {
+                let y_delta = first_move / 8;
+                if (y_delta < 0 && y_delta.abs() <= NUM_SQUARES_TO_EDGE[start][0])
+                    || (y_delta > 0 && y_delta.abs() <= NUM_SQUARES_TO_EDGE[start][1])
+                {
+                    for second_move in DIRECTION_OFFSETS.into_iter().take(4).skip(2) {
+                        let x_delta = second_move % 8;
+                        if (x_delta < 0 && x_delta.abs() <= NUM_SQUARES_TO_EDGE[start][2])
+                            || (x_delta > 0 && x_delta.abs() <= NUM_SQUARES_TO_EDGE[start][3])
+                        {
+                            moves.push(Move {
+                                start,
+                                end: (start as i8 + first_move + second_move) as usize,
+                            });
+                        }
+                    }
+                }
+            } else {
+                let x_delta = first_move % 8;
+                if (x_delta < 0 && x_delta.abs() <= NUM_SQUARES_TO_EDGE[start][2])
+                    || (x_delta > 0 && x_delta.abs() <= NUM_SQUARES_TO_EDGE[start][3])
+                {
+                    for second_move in DIRECTION_OFFSETS.into_iter().take(2) {
+                        let y_delta = second_move / 8;
+                        if (y_delta < 0 && y_delta.abs() <= NUM_SQUARES_TO_EDGE[start][0])
+                            || (y_delta > 0 && y_delta.abs() <= NUM_SQUARES_TO_EDGE[start][1])
+                        {
+                            moves.push(Move {
+                                start,
+                                end: (start as i8 + first_move + second_move) as usize,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        moves
+            .into_iter()
+            .filter(|m| {
+                m.end < 64
+                    && !(self.troops[m.end].is_some()
+                        && self.troops[m.end].unwrap().color == self.turn)
+            })
+            .collect()
     }
 }
 
