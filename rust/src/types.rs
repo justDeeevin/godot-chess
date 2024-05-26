@@ -394,7 +394,7 @@ impl Board {
             }
         }
 
-        moves
+        moves.into_iter().filter(|m| m.end < 64).collect()
     }
 }
 
