@@ -110,7 +110,6 @@ impl ChessBoard2D {
                     start: self.current_picked,
                     end: i,
                 }) || i == self.current_picked
-                    || self.board.troops[self.current_picked].unwrap().piece == Piece::King
                 {
                     // Drop piece on the square
                     piece.base_mut().set_position(

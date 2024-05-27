@@ -318,7 +318,9 @@ impl Board {
                         Piece::Knight => {
                             moves.extend(self.generate_knight_moves(i));
                         }
-                        _ => {}
+                        Piece::King => {
+                            moves.extend(self.generate_king_moves(i));
+                        }
                     }
                 }
             }
@@ -451,6 +453,21 @@ impl Board {
                         && self.troops[m.end].unwrap().color == self.turn)
             })
             .collect()
+    }
+
+    fn generate_king_moves(&self, start: usize) -> Vec<Move> {
+        let mut moves = Vec::new();
+
+        for (i, cardinal) in DIRECTION_OFFSETS.into_iter().enumerate() {
+            if NUM_SQUARES_TO_EDGE[start][i] != 0 {
+                moves.push(Move {
+                    start,
+                    end: (start as i8 + cardinal) as usize,
+                })
+            }
+        }
+
+        moves
     }
 }
 
