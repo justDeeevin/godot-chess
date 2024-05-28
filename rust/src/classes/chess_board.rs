@@ -3,12 +3,12 @@ use crate::{
     types::{self, Board, Move, Piece},
 };
 use godot::{
-    engine::{CanvasGroup, ICanvasGroup, Sprite2D, Texture2D},
+    engine::{Sprite2D, Texture2D},
     prelude::*,
 };
 
 #[derive(GodotClass)]
-#[class(base = CanvasGroup)]
+#[class(base = Node2D)]
 pub struct ChessBoard2D {
     #[export]
     dark_color: Color,
@@ -23,12 +23,12 @@ pub struct ChessBoard2D {
     last_picked: usize,
     last_placed: usize,
     current_picked: usize,
-    base: Base<CanvasGroup>,
+    base: Base<Node2D>,
 }
 
 #[godot_api]
-impl ICanvasGroup for ChessBoard2D {
-    fn init(base: Base<CanvasGroup>) -> Self {
+impl INode2D for ChessBoard2D {
+    fn init(base: Base<Node2D>) -> Self {
         Self {
             dark_color: Color::from_html("#1A4F42").unwrap(),
             square_size: 70.0,
